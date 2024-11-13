@@ -1,44 +1,62 @@
 #include <Arduino.h>
 #include <WiFiManager.h>
+#include <Firebase_ESP_Client.h>
+#include "addons/TokenHelper.h"
+#include "addons/RTDBHelper.h"
+
+#define API_KEY "AIzaSyB3ekwAq5EGkH_MsXUCa1R3NxIH7KTK6zk"
+#define DB_URL "https://curtainslide-test-default-rtdb.asia-southeast1.firebasedatabase.app/"
 
 #define LED1 17
 
-bool res;
+bool isWifiConnected;
 
-void resetWifi(){
-  WiFiManager wm;
-  wm.resetSettings();
-}
+FirebaseData fbdo;
+FirebaseAuth auth;
+FirebaseConfig config;
 
-bool initWifi(){
-  WiFiManager wm;
-  bool res;
-  res = wm.autoConnect("CTNSLD-69", "testPass");
-  return res;
-}
+String ctnsld_email = "test@ctnsld.co";
+String ctnsld_pword = "12345678";
+String ctnsld_userid = "pOMaE87MRrZD3lg2kyO306XzndR2";
+
+String ledStatusPath = "users/pOMaE87MRrZD3lg2kyO306XzndR2/ledInfo/ledStatus";
+
+unsigned long sendDataPrevMillis = 0;
 
 void setup() {
-
-  resetWifi();
+  WiFiManager wm;
+  // to make sure every run, the wifi is reset
+  // wm.resetSettings();
   // put your setup code here, to run once:
   Serial.begin(9600);
   pinMode(LED1, OUTPUT);
+  // initializing wifi access point and connection
+  isWifiConnected = wm.autoConnect("CTNSLD-69", "testPass");
 
-  WiFiManager wm;
-  res = wm.autoConnect("CTNSLD-69", "testPass");
-
-  if(!res){
+  if(!isWifiConnected){
     Serial.println("Failed to connect.");
     ESP.restart();
   } else {
     Serial.println("You are now connected!");
   }
+  
+  config.api_key = API_KEY;
+  config.database_url = DB_URL;
+  auth.user.email = ctnsld_email;
+  auth.user.password = ctnsld_pword;
+  
+  Firebase.begin(&config, &auth);
+  Firebase.reconnectWiFi(true);
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
-  if(res){
-    digitalWrite(LED1, 1);
+  if(Firebase.ready() && (millis() - sendDataPrevMillis > 2000 || sendDataPrevMillis == 0)){
+    sendDataPrevMillis = millis();
+    if (Firebase.RTDB.getBool(&fbdo, ledStatusPath)){
+      digitalWrite(LED1, fbdo.boolData());
+    } else {
+      Serial.println(fbdo.errorReason());
+    }
   }
-  
 }
