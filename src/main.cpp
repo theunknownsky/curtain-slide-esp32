@@ -7,11 +7,11 @@
 #define API_KEY "AIzaSyB3ekwAq5EGkH_MsXUCa1R3NxIH7KTK6zk"
 #define DB_URL "https://curtainslide-test-default-rtdb.asia-southeast1.firebasedatabase.app/"
 
-#define LED1 17
+#define LED1 21
 
 bool isWifiConnected;
 
-FirebaseData fbdo;
+FirebaseData fbdo, fbdo_1, fbdo_2;
 FirebaseAuth auth;
 FirebaseConfig config;
 
@@ -22,6 +22,7 @@ String ctnsld_userid = "pOMaE87MRrZD3lg2kyO306XzndR2";
 String ledStatusPath = "users/pOMaE87MRrZD3lg2kyO306XzndR2/ledInfo/ledStatus";
 
 unsigned long sendDataPrevMillis = 0;
+bool ledStatus;
 
 void setup() {
   WiFiManager wm;
@@ -47,16 +48,22 @@ void setup() {
   
   Firebase.begin(&config, &auth);
   Firebase.reconnectWiFi(true);
+
+  // stream
+  if(!Firebase.RTDB.beginStream(&fbdo, ledStatusPath)){
+    Serial.printf("Stream Error: %s", fbdo.errorReason().c_str());
+  }
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
-  if(Firebase.ready() && (millis() - sendDataPrevMillis > 2000 || sendDataPrevMillis == 0)){
-    sendDataPrevMillis = millis();
-    if (Firebase.RTDB.getBool(&fbdo, ledStatusPath)){
-      digitalWrite(LED1, fbdo.boolData());
-    } else {
-      Serial.println(fbdo.errorReason());
+  if(Firebase.ready()){
+    if(!Firebase.RTDB.readStream(&fbdo)){
+      Serial.printf("Stream Error: %s", fbdo.errorReason().c_str());
+    }
+    if(fbdo.streamAvailable()){
+      ledStatus = fbdo.boolData();
+      digitalWrite(LED1, ledStatus);
     }
   }
 }
