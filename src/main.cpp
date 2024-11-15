@@ -3,9 +3,8 @@
 #include <Firebase_ESP_Client.h>
 #include "addons/TokenHelper.h"
 #include "addons/RTDBHelper.h"
+#include <credentials.h>
 
-#define API_KEY "AIzaSyB3ekwAq5EGkH_MsXUCa1R3NxIH7KTK6zk"
-#define DB_URL "https://curtainslide-test-default-rtdb.asia-southeast1.firebasedatabase.app/"
 
 #define LED1 17
 #define LED2 18
@@ -52,20 +51,20 @@ void setup() {
   
   config.api_key = API_KEY;
   config.database_url = DB_URL;
-  auth.user.email = ctnsld_email;
-  auth.user.password = ctnsld_pword;
+  auth.user.email = CTNSLD_EMAIL;
+  auth.user.password = CTNSLD_PASSWORD;
   
   Firebase.begin(&config, &auth);
   Firebase.reconnectWiFi(true);
 
   // stream
-  if(!Firebase.RTDB.beginStream(&fbdo_ledStatus, ledStatusPath)){
+  if(!Firebase.RTDB.beginStream(&fbdo_ledStatus, LED_STATUS_PATH)){
     Serial.printf("Stream Error: %s", fbdo_ledStatus.errorReason().c_str());
   }
-  if(!Firebase.RTDB.beginStream(&fbdo_ledBrightness, ledBrightnessPath)){
+  if(!Firebase.RTDB.beginStream(&fbdo_ledBrightness, LED_BRIGHTNESS_PATH)){
     Serial.printf("Stream Error: %s", fbdo_ledBrightness.errorReason().c_str());
   }
-  if(!Firebase.RTDB.beginStream(&fbdo_ledColorValue, ledColorValuePath)){
+  if(!Firebase.RTDB.beginStream(&fbdo_ledColorValue, LED_COLOR_VALUE_PATH)){
     Serial.printf("Stream Error: %s", fbdo_ledColorValue.errorReason().c_str());
   }
 }
