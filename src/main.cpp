@@ -16,14 +16,6 @@ FirebaseData fbdo_ledStatus, fbdo_ledBrightness, fbdo_ledColorValue, fbdo_curtai
 FirebaseAuth auth;
 FirebaseConfig config;
 
-String ctnsld_email = "test@ctnsld.co";
-String ctnsld_pword = "12345678";
-String ctnsld_userid = "pOMaE87MRrZD3lg2kyO306XzndR2";
-
-String ledStatusPath = "users/pOMaE87MRrZD3lg2kyO306XzndR2/ledInfo/ledStatus";
-String ledBrightnessPath = "users/pOMaE87MRrZD3lg2kyO306XzndR2/ledInfo/ledBrightness";
-String ledColorValuePath = "users/pOMaE87MRrZD3lg2kyO306XzndR2/ledInfo/ledColorValue";
-
 bool ledStatus;
 int ledBrightness;
 int red;
@@ -40,7 +32,7 @@ void setup() {
   pinMode(LED2, OUTPUT);
   pinMode(LED3, OUTPUT);
   // initializing wifi access point and connection
-  isWifiConnected = wm.autoConnect("CTNSLD-69", "testPass");
+  isWifiConnected = wm.autoConnect(AP_SSID, AP_PASSWORD);
 
   if(!isWifiConnected){
     Serial.println("Failed to connect.");
