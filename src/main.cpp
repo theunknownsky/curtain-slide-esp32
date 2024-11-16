@@ -7,8 +7,9 @@
 
 
 #define LED1 17
-#define LED2 18
-#define LED3 21
+
+#define SWITCH_CLOSE 18
+#define SWITCH_OPEN 19
 
 bool isWifiConnected;
 
@@ -21,6 +22,11 @@ int ledBrightness;
 int red;
 int green;
 int blue;
+int curtainState;
+int curtainCloseDuration;
+int switchOpen;
+int switchClose;
+
 
 void setup() {
   WiFiManager wm;
@@ -29,8 +35,8 @@ void setup() {
   // put your setup code here, to run once:
   Serial.begin(9600);
   pinMode(LED1, OUTPUT);
-  pinMode(LED2, OUTPUT);
-  pinMode(LED3, OUTPUT);
+  pinMode(SWITCH_CLOSE, INPUT);
+  pinMode(SWITCH_OPEN, INPUT);
   // initializing wifi access point and connection
   isWifiConnected = wm.autoConnect(AP_SSID, AP_PASSWORD);
 
@@ -58,6 +64,12 @@ void setup() {
   }
   if(!Firebase.RTDB.beginStream(&fbdo_ledColorValue, LED_COLOR_VALUE_PATH)){
     Serial.printf("Stream Error: %s", fbdo_ledColorValue.errorReason().c_str());
+  }
+  if(!Firebase.RTDB.beginStream(&fbdo_curtainState, CURTAIN_STATE_PATH)){
+    Serial.printf("Stream Error: %s", fbdo_curtainState.errorReason().c_str());
+  }
+  if(!Firebase.RTDB.beginStream(&fbdo_curtainCloseDuration, CURTAIN_CLOSE_DURATION_PATH)){
+    Serial.printf("Stream Error: %s", fbdo_curtainCloseDuration.errorReason().c_str());
   }
 }
 
@@ -88,6 +100,21 @@ void changeLEDColor(String colorHexcode){
   Serial.println(blue);
 }
 
+void changeCurtainState(int state){
+  curtainState = state;
+  Serial.print("Curtain State: ");
+  Serial.println(curtainState);
+}
+
+void getCurtainCloseDuration(int seconds){
+  curtainCloseDuration = seconds;
+  for(int i = 0; i < curtainCloseDuration; i++){
+    Serial.print(curtainCloseDuration - i);
+    Serial.println(" seconds remaining.");
+    delay(1000);
+  }
+}
+
 void loop() {
   // put your main code here, to run repeatedly:
   if(Firebase.ready()){
@@ -110,6 +137,18 @@ void loop() {
       if(fbdo_ledColorValue.streamAvailable()){
         changeLEDColor(fbdo_ledColorValue.stringData());
       }
+    }
+    if(!Firebase.RTDB.readStream(&fbdo_curtainState)){
+      Serial.printf("Stream Error: %s", fbdo_curtainState.errorReason().c_str());
+    }
+    if(fbdo_curtainState.streamAvailable()){
+      changeCurtainState(fbdo_curtainState.intData());
+    }
+    if(!Firebase.RTDB.readStream(&fbdo_curtainCloseDuration)){
+      Serial.printf("Stream Error: %s", fbdo_curtainCloseDuration.errorReason().c_str());
+    }
+    if(fbdo_curtainCloseDuration.streamAvailable()){
+      getCurtainCloseDuration(fbdo_curtainCloseDuration.intData());
     }
   }
 }
