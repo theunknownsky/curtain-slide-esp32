@@ -160,6 +160,9 @@ void loop() {
       Serial.println("Curtain Closed Status Changing...");
       Serial.print("Curtain Closed: ");
       Serial.println(isCurtainClosed);
+      if(!Firebase.RTDB.setInt(&fbdo_curtainState, CURTAIN_STATE_PATH, 1)){ // resets curtainState (to 1 - not moving) in Firebase RTDB
+        Serial.printf("Stream Error: %s", fbdo_curtainState.errorReason().c_str());
+      }
     }
     if(isCurtainOpened != digitalRead(SWITCH_OPEN)){ // following actions only gets called if the digitalRead(SWITCH_OPEN) gives a different value 
       isCurtainOpened = digitalRead(SWITCH_OPEN);
@@ -169,6 +172,9 @@ void loop() {
       Serial.println("Curtain Opened Status Changing...");
       Serial.print("Curtain Opened: ");
       Serial.println(isCurtainOpened);
+      if(!Firebase.RTDB.setInt(&fbdo_curtainState, CURTAIN_STATE_PATH, 1)){ // resets curtainState (to 1 - not moving) in Firebase RTDB
+        Serial.printf("Stream Error: %s", fbdo_curtainState.errorReason().c_str());
+      }
     }
   }
 }
