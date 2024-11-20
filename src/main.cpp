@@ -4,21 +4,22 @@
 #include "addons/TokenHelper.h"
 #include "addons/RTDBHelper.h"
 #include <credentials.h>
-
+#include <FastLED.h>
 
 #define LED1 25
-
 #define SWITCH_CLOSE 35
 #define SWITCH_OPEN 34
-
-bool isWifiConnected;
+#define NUM_LEDS 30 // TO BE CHANGED UPON BUILD
+#define DATA_PIN 17 // TO BE CHANGED UPON BUILD (TO 25???)
 
 FirebaseData fbdo_ledStatus, fbdo_ledBrightness, fbdo_ledColorValue, fbdo_curtainState, fbdo_curtainCloseDuration, fbdo_isCurtainClosed, fbdo_isCurtainOpened;
 FirebaseAuth auth;
 FirebaseConfig config;
 
+bool isWifiConnected;
 bool ledStatus;
 int ledBrightness;
+int actualLedBrightness;
 int red;
 int green;
 int blue;
@@ -27,6 +28,7 @@ int curtainCloseDuration;
 bool isCurtainOpened;
 bool isCurtainClosed;
 
+CRGB leds[NUM_LEDS]; // setyp WS2812B
 
 void setup() {
   WiFiManager wm;
@@ -37,6 +39,7 @@ void setup() {
   pinMode(LED1, OUTPUT);
   pinMode(SWITCH_CLOSE, INPUT_PULLUP);
   pinMode(SWITCH_OPEN, INPUT_PULLUP);
+  FastLED.addLeds<WS2812B, DATA_PIN, GRB>(leds, NUM_LEDS); 
   // initializing wifi access point and connection
   isWifiConnected = wm.autoConnect(AP_SSID, AP_PASSWORD);
 
@@ -76,17 +79,40 @@ void setup() {
   }
 }
 
+void turnOnWS2812B(){
+  FastLED.setBrightness(actualLedBrightness);
+  for(int i = 0; i < NUM_LEDS; i++){
+    leds[i] = CRGB(red, green, blue);
+  }
+}
+
+void turnOffWS2812B(){
+  FastLED.setBrightness(0);
+  for(int i = 0; i < NUM_LEDS; i++){
+    leds[i] = CRGB::Black;
+  }
+}
+
 void switchLEDStatus(bool status){
   ledStatus = status;
   digitalWrite(LED1, ledStatus);
   Serial.print("LED Status: ");
   Serial.println(ledStatus);
+  // Switch LED/RGB Strip to on or off
+  if(ledStatus){
+    turnOnWS2812B();
+  } else {
+    turnOffWS2812B();
+  }
 }
 
 void changeLEDBrightness(int brightness){
   ledBrightness = brightness;
   Serial.print("LED Brightness: ");
   Serial.println(ledBrightness);
+  // Change LED/RGB Strip brightness 
+  actualLedBrightness = ledBrightness * 20; // 'A' value for ARGB goes from 0 to 255 (200 would be the max for this)
+  turnOnWS2812B();
 }
 
 void changeLEDColor(String colorHexcode){
@@ -101,12 +127,21 @@ void changeLEDColor(String colorHexcode){
   Serial.println(green);
   Serial.print("Blue: ");
   Serial.println(blue);
+  // Change LED/RGB Strip color (most likely along with 'A' value of ARGB)
+  turnOnWS2812B();
 }
 
 void changeCurtainState(int state){
   curtainState = state;
   Serial.print("Curtain State: ");
   Serial.println(curtainState);
+  if(curtainState == 0){
+    // Close Curtain
+  } else if (curtainState == 2){
+    // Open Curtain
+  } else if (curtainState == 1){
+    // Make Curtain Stationary
+  }
 }
 
 void loop() {
