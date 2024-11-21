@@ -6,7 +6,7 @@
 #include <credentials.h>
 #include <FastLED.h>
 
-#define LED1 25
+#define LED1 25 // ONLY FOR TESTING LED STATUS
 #define SWITCH_CLOSE 35
 #define SWITCH_OPEN 34
 #define NUM_LEDS 30 // TO BE CHANGED UPON BUILD
@@ -187,28 +187,32 @@ void loop() {
       isCurtainOpened = fbdo_isCurtainOpened.boolData();
     }
 
-    if(isCurtainClosed != digitalRead(SWITCH_CLOSE)){ // following actions only gets called if the digitalRead(SWITCH_CLOSE) gives a different value 
-      isCurtainClosed = digitalRead(SWITCH_CLOSE);
+    if(isCurtainClosed != !digitalRead(SWITCH_CLOSE)){ // following actions only gets called if the digitalRead(SWITCH_CLOSE) gives a different value 
+      isCurtainClosed = !digitalRead(SWITCH_CLOSE);
       if(!Firebase.RTDB.setBool(&fbdo_isCurtainClosed, IS_CURTAIN_CLOSED_PATH, isCurtainClosed)){ // changes isCurtainClosed in Firebase RTDB
         Serial.printf("Stream Error: %s", fbdo_isCurtainClosed.errorReason().c_str());
       }
       Serial.println("Curtain Closed Status Changing...");
       Serial.print("Curtain Closed: ");
       Serial.println(isCurtainClosed);
-      if(!Firebase.RTDB.setInt(&fbdo_curtainState, CURTAIN_STATE_PATH, 1)){ // resets curtainState (to 1 - not moving) in Firebase RTDB
-        Serial.printf("Stream Error: %s", fbdo_curtainState.errorReason().c_str());
+      if(curtainState == 0){
+        if(!Firebase.RTDB.setInt(&fbdo_curtainState, CURTAIN_STATE_PATH, 1)){ // resets curtainState (to 1 - not moving) in Firebase RTDB
+          Serial.printf("Stream Error: %s", fbdo_curtainState.errorReason().c_str());
+        }
       }
     }
-    if(isCurtainOpened != digitalRead(SWITCH_OPEN)){ // following actions only gets called if the digitalRead(SWITCH_OPEN) gives a different value 
-      isCurtainOpened = digitalRead(SWITCH_OPEN);
+    if(isCurtainOpened != !digitalRead(SWITCH_OPEN)){ // following actions only gets called if the digitalRead(SWITCH_OPEN) gives a different value 
+      isCurtainOpened = !digitalRead(SWITCH_OPEN);
       if(!Firebase.RTDB.setBool(&fbdo_isCurtainOpened, IS_CURTAIN_OPENED_PATH, isCurtainOpened)){ // changes isCurtainOpened in Firebase RTDB
         Serial.printf("Stream Error: %s", fbdo_isCurtainOpened.errorReason().c_str());
       }
       Serial.println("Curtain Opened Status Changing...");
       Serial.print("Curtain Opened: ");
       Serial.println(isCurtainOpened);
-      if(!Firebase.RTDB.setInt(&fbdo_curtainState, CURTAIN_STATE_PATH, 1)){ // resets curtainState (to 1 - not moving) in Firebase RTDB
-        Serial.printf("Stream Error: %s", fbdo_curtainState.errorReason().c_str());
+      if(curtainState == 2){
+        if(!Firebase.RTDB.setInt(&fbdo_curtainState, CURTAIN_STATE_PATH, 1)){ // resets curtainState (to 1 - not moving) in Firebase RTDB
+          Serial.printf("Stream Error: %s", fbdo_curtainState.errorReason().c_str());
+        }
       }
     }
   }
