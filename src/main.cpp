@@ -6,11 +6,18 @@
 #include <credentials.h>
 #include <FastLED.h>
 
-#define LED1 25 // ONLY FOR TESTING LED STATUS
-#define SWITCH_CLOSE 35
-#define SWITCH_OPEN 34
+#define LED1 16 // ONLY FOR TESTING LED STATUS
+
+#define SWITCH_CLOSE 22
+#define SWITCH_OPEN 23
 #define NUM_LEDS 30 // TO BE CHANGED UPON BUILD
 #define DATA_PIN 17 // TO BE CHANGED UPON BUILD (TO 25???)
+#define MTRIN1 14  
+#define MTRIN2 27
+#define ENA 26
+#define MTRIN3 25
+#define MTRIN4 33
+#define ENB 32
 
 FirebaseData fbdo_ledStatus, fbdo_ledBrightness, fbdo_ledColorValue, fbdo_curtainState, fbdo_curtainCloseDuration, fbdo_isCurtainClosed, fbdo_isCurtainOpened;
 FirebaseAuth auth;
@@ -37,6 +44,13 @@ void setup() {
   // put your setup code here, to run once:
   Serial.begin(9600);
   pinMode(LED1, OUTPUT);
+  pinMode(DATA_PIN, OUTPUT);
+  pinMode(MTRIN1, OUTPUT);
+  pinMode(MTRIN2, OUTPUT);
+  pinMode(ENA, OUTPUT);
+  pinMode(MTRIN3, OUTPUT);
+  pinMode(MTRIN4, OUTPUT);
+  pinMode(ENB, OUTPUT);
   pinMode(SWITCH_CLOSE, INPUT_PULLUP);
   pinMode(SWITCH_OPEN, INPUT_PULLUP);
   FastLED.addLeds<WS2812B, DATA_PIN, GRB>(leds, NUM_LEDS); 
@@ -131,16 +145,43 @@ void changeLEDColor(String colorHexcode){
   turnOnWS2812B();
 }
 
+void closeCurtain(){
+  digitalWrite(ENA, HIGH);
+  digitalWrite(MTRIN1, HIGH);
+  digitalWrite(MTRIN2, LOW);
+  digitalWrite(ENB, HIGH);
+  digitalWrite(MTRIN3, LOW);
+  digitalWrite(MTRIN4, HIGH);
+}
+
+void openCurtain(){
+  digitalWrite(ENA, HIGH);
+  digitalWrite(MTRIN1, LOW);
+  digitalWrite(MTRIN2, HIGH);
+  digitalWrite(ENB, HIGH);
+  digitalWrite(MTRIN3, HIGH);
+  digitalWrite(MTRIN4, LOW);
+}
+
+void stopCurtain(){
+  digitalWrite(MTRIN1, LOW);
+  digitalWrite(MTRIN2, LOW);
+  digitalWrite(ENA, LOW);
+  digitalWrite(MTRIN3, LOW);
+  digitalWrite(MTRIN4, LOW);
+  digitalWrite(ENB, LOW);
+}
+
 void changeCurtainState(int state){
   curtainState = state;
   Serial.print("Curtain State: ");
   Serial.println(curtainState);
   if(curtainState == 0){
-    // Close Curtain
+    closeCurtain();
   } else if (curtainState == 2){
-    // Open Curtain
+    openCurtain();
   } else if (curtainState == 1){
-    // Make Curtain Stationary
+    stopCurtain();
   }
 }
 
