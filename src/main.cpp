@@ -6,18 +6,19 @@
 #include <credentials.h>
 #include <FastLED.h>
 
-#define LED1 16 // ONLY FOR TESTING LED STATUS
-
 #define SWITCH_CLOSE 22
 #define SWITCH_OPEN 23
+
 #define NUM_LEDS 30 // TO BE CHANGED UPON BUILD
 #define DATA_PIN 17 // TO BE CHANGED UPON BUILD (TO 25???)
-#define MTRIN1 14  
-#define MTRIN2 27
-#define ENA 26
-#define MTRIN3 25
-#define MTRIN4 33
-#define ENB 32
+
+// #define ENA 14
+#define MTRA1 27
+#define MTRA2 26
+
+#define MTRB1 25
+#define MTRB2 33
+// #define ENB 32
 
 FirebaseData fbdo_ledStatus, fbdo_ledBrightness, fbdo_ledColorValue, fbdo_curtainState, fbdo_curtainCloseDuration, fbdo_isCurtainClosed, fbdo_isCurtainOpened;
 FirebaseAuth auth;
@@ -32,27 +33,43 @@ int green;
 int blue;
 int curtainState = 1;
 int curtainCloseDuration;
-bool isCurtainOpened;
-bool isCurtainClosed;
+bool isCurtainOpened = false;
+bool isCurtainClosed = false;
 
-CRGB leds[NUM_LEDS]; // setyp WS2812B
+CRGB leds[NUM_LEDS]; // setyup WS2812B
+
+const int freq = 30000;
+const int pwmChannelA = 0; // PWM channel for Motor A
+const int pwmChannelB = 1; // PWM channel for Motor B
+const int resolution = 8;
+int dutyCycleA = 255;
+int dutyCycleB = 255;
 
 void setup() {
   WiFiManager wm;
   // to make sure every run, the wifi is reset
-  wm.resetSettings();
+  // wm.resetSettings();
   // put your setup code here, to run once:
   Serial.begin(9600);
   pinMode(DATA_PIN, OUTPUT);
-  pinMode(MTRIN1, OUTPUT);
-  pinMode(MTRIN2, OUTPUT);
   // pinMode(ENA, OUTPUT);
-  pinMode(MTRIN3, OUTPUT);
-  pinMode(MTRIN4, OUTPUT);
+  pinMode(MTRA1, OUTPUT);
+  pinMode(MTRA2, OUTPUT);
+  pinMode(MTRB1, OUTPUT);
+  pinMode(MTRB2, OUTPUT);
   // pinMode(ENB, OUTPUT);
   pinMode(SWITCH_CLOSE, INPUT_PULLUP);
   pinMode(SWITCH_OPEN, INPUT_PULLUP);
   FastLED.addLeds<WS2812B, DATA_PIN, GRB>(leds, NUM_LEDS); 
+
+  // Configure LEDC PWM for Motor A
+  // ledcSetup(pwmChannelA, freq, resolution);
+  // ledcAttachPin(ENA, pwmChannelA);
+
+  // Configure LEDC PWM for Motor B
+  // ledcSetup(pwmChannelB, freq, resolution);
+  // ledcAttachPin(ENB, pwmChannelB);
+
   // initializing wifi access point and connection
   isWifiConnected = wm.autoConnect(AP_SSID, AP_PASSWORD);
 
@@ -126,7 +143,7 @@ void changeLEDBrightness(int brightness){
   Serial.print("LED Brightness: ");
   Serial.println(ledBrightness);
   // Change LED/RGB Strip brightness 
-  actualLedBrightness = ledBrightness * 10; // 'A' value for ARGB goes from 0 to 255 (200 would be the max for this)
+  actualLedBrightness = ledBrightness * 5; // 'A' value for ARGB goes from 0 to 255 (50 would be the max for this)
   turnOnWS2812B();
 }
 
@@ -147,30 +164,30 @@ void changeLEDColor(String colorHexcode){
 }
 
 void closeCurtain(){
-  // digitalWrite(ENA, HIGH);
-  digitalWrite(MTRIN1, HIGH);
-  digitalWrite(MTRIN2, LOW);
-  // digitalWrite(ENB, HIGH);
-  digitalWrite(MTRIN3, LOW);
-  digitalWrite(MTRIN4, HIGH);
+  // ledcWrite(pwmChannelA, dutyCycleA);
+  digitalWrite(MTRA1, HIGH);
+  digitalWrite(MTRA2, LOW);
+  // ledcWrite(pwmChannelB, dutyCycleB);
+  digitalWrite(MTRB1, HIGH);
+  digitalWrite(MTRB2, LOW);
 }
 
 void openCurtain(){
-  // digitalWrite(ENA, HIGH);
-  digitalWrite(MTRIN1, LOW);
-  digitalWrite(MTRIN2, HIGH);
-  // digitalWrite(ENB, HIGH);
-  digitalWrite(MTRIN3, HIGH);
-  digitalWrite(MTRIN4, LOW);
+  // ledcWrite(pwmChannelA, dutyCycleA);
+  digitalWrite(MTRA1, LOW);
+  digitalWrite(MTRA2, HIGH);
+  // ledcWrite(pwmChannelB, dutyCycleB);
+  digitalWrite(MTRB1, LOW);
+  digitalWrite(MTRB2, HIGH);
 }
 
 void stopCurtain(){
-  digitalWrite(MTRIN1, LOW);
-  digitalWrite(MTRIN2, LOW);
-  // digitalWrite(ENA, LOW);
-  digitalWrite(MTRIN3, LOW);
-  digitalWrite(MTRIN4, LOW);
-  // digitalWrite(ENB, LOW);
+  // ledcWrite(pwmChannelA, dutyCycleA);
+  digitalWrite(MTRA1, LOW);
+  digitalWrite(MTRA2, LOW);
+  // ledcWrite(pwmChannelB, dutyCycleB);
+  digitalWrite(MTRB1, LOW);
+  digitalWrite(MTRB2, LOW);
 }
 
 void changeCurtainState(int state){
@@ -188,39 +205,8 @@ void changeCurtainState(int state){
 
 void loop() {
   // put your main code here, to run repeatedly:
-
-  if(isCurtainClosed != !digitalRead(SWITCH_CLOSE)){ // following actions only gets called if the digitalRead(SWITCH_CLOSE) gives a different value 
-    isCurtainClosed = !digitalRead(SWITCH_CLOSE);
-    if(!Firebase.RTDB.setBool(&fbdo_isCurtainClosed, IS_CURTAIN_CLOSED_PATH, isCurtainClosed)){ // changes isCurtainClosed in Firebase RTDB
-      Serial.printf("Stream Error: %s", fbdo_isCurtainClosed.errorReason().c_str());
-    }
-    Serial.println("Curtain Closed Status Changing...");
-    Serial.print("Curtain Closed: ");
-    Serial.println(isCurtainClosed);
-    if(curtainState == 0){
-      changeCurtainState(1);
-      if(!Firebase.RTDB.setInt(&fbdo_curtainState, CURTAIN_STATE_PATH, 1)){ // resets curtainState (to 1 - not moving) in Firebase RTDB
-        Serial.printf("Stream Error: %s", fbdo_curtainState.errorReason().c_str());
-      }
-    }
-  }
-  if(isCurtainOpened != !digitalRead(SWITCH_OPEN)){ // following actions only gets called if the digitalRead(SWITCH_OPEN) gives a different value 
-    isCurtainOpened = !digitalRead(SWITCH_OPEN);
-    if(!Firebase.RTDB.setBool(&fbdo_isCurtainOpened, IS_CURTAIN_OPENED_PATH, isCurtainOpened)){ // changes isCurtainOpened in Firebase RTDB
-      Serial.printf("Stream Error: %s", fbdo_isCurtainOpened.errorReason().c_str());
-    }
-    Serial.println("Curtain Opened Status Changing...");
-    Serial.print("Curtain Opened: ");
-    Serial.println(isCurtainOpened);
-    if(curtainState == 2){
-      changeCurtainState(1);
-      if(!Firebase.RTDB.setInt(&fbdo_curtainState, CURTAIN_STATE_PATH, 1)){ // resets curtainState (to 1 - not moving) in Firebase RTDB
-        Serial.printf("Stream Error: %s", fbdo_curtainState.errorReason().c_str());
-      }
-    }
-  }
-  
   if(Firebase.ready()){ // making sure Firebase is ready before calling any firebase function
+    Serial.print("Firebase RTDB Ready. ");
     if(!Firebase.RTDB.readStream(&fbdo_ledStatus)){ // reads ledStatus
       Serial.printf("Stream Error: %s", fbdo_ledStatus.errorReason().c_str());
     }
@@ -261,23 +247,39 @@ void loop() {
       isCurtainOpened = fbdo_isCurtainOpened.boolData();
     }
 
-    if(!Firebase.RTDB.setBool(&fbdo_isCurtainClosed, IS_CURTAIN_CLOSED_PATH, isCurtainClosed)){ // changes isCurtainClosed in Firebase RTDB
-      Serial.printf("Stream Error: %s", fbdo_isCurtainClosed.errorReason().c_str());
-    }
-    if(curtainState == 0){
-      if(!Firebase.RTDB.setInt(&fbdo_curtainState, CURTAIN_STATE_PATH, 1)){ // resets curtainState (to 1 - not moving) in Firebase RTDB
-        Serial.printf("Stream Error: %s", fbdo_curtainState.errorReason().c_str());
+    if(isCurtainClosed != !digitalRead(SWITCH_CLOSE)){ // following actions only gets called if the digitalRead(SWITCH_CLOSE) gives a different value 
+      isCurtainClosed = !digitalRead(SWITCH_CLOSE);
+      if(!Firebase.RTDB.setBool(&fbdo_isCurtainClosed, IS_CURTAIN_CLOSED_PATH, isCurtainClosed)){ // changes isCurtainClosed in Firebase RTDB
+        Serial.printf("Stream Error: %s", fbdo_isCurtainClosed.errorReason().c_str());
+      }
+      Serial.println("Curtain Closed Status Changing...");
+      Serial.print("Curtain Closed: ");
+      Serial.println(isCurtainClosed);
+      if(curtainState == 0){
+        changeCurtainState(1);
+        if(!Firebase.RTDB.setInt(&fbdo_curtainState, CURTAIN_STATE_PATH, 1)){ // resets curtainState (to 1 - not moving) in Firebase RTDB
+          Serial.printf("Stream Error: %s", fbdo_curtainState.errorReason().c_str());
+        }
       }
     }
-
-    if(!Firebase.RTDB.setBool(&fbdo_isCurtainOpened, IS_CURTAIN_OPENED_PATH, isCurtainOpened)){ // changes isCurtainOpened in Firebase RTDB
-      Serial.printf("Stream Error: %s", fbdo_isCurtainOpened.errorReason().c_str());
-    }
-    if(curtainState == 2){
-      if(!Firebase.RTDB.setInt(&fbdo_curtainState, CURTAIN_STATE_PATH, 1)){ // resets curtainState (to 1 - not moving) in Firebase RTDB
-        Serial.printf("Stream Error: %s", fbdo_curtainState.errorReason().c_str());
+    if(isCurtainOpened != !digitalRead(SWITCH_OPEN)){ // following actions only gets called if the digitalRead(SWITCH_OPEN) gives a different value 
+      isCurtainOpened = !digitalRead(SWITCH_OPEN);
+      if(!Firebase.RTDB.setBool(&fbdo_isCurtainOpened, IS_CURTAIN_OPENED_PATH, isCurtainOpened)){ // changes isCurtainOpened in Firebase RTDB
+        Serial.printf("Stream Error: %s", fbdo_isCurtainOpened.errorReason().c_str());
+      }
+      Serial.println("Curtain Opened Status Changing...");
+      Serial.print("Curtain Opened: ");
+      Serial.println(isCurtainOpened);
+      if(curtainState == 2){
+        changeCurtainState(1);
+        if(!Firebase.RTDB.setInt(&fbdo_curtainState, CURTAIN_STATE_PATH, 1)){ // resets curtainState (to 1 - not moving) in Firebase RTDB
+          Serial.printf("Stream Error: %s", fbdo_curtainState.errorReason().c_str());
+        }
       }
     }
-
+    delay(1000);
+  } else {
+    Serial.println("Firebase RTDB not ready. ");
+    delay(1000);
   }
 }
